@@ -3,3 +3,4 @@ __pycache__
 *tests
 !/Lib/unittest/
 !/Lib/unittest/*.py
+/Lib/site-packages
