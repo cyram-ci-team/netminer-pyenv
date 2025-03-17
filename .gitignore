@@ -4,3 +4,12 @@ __pycache__
 !/Lib/unittest/
 !/Lib/unittest/*.py
 /Lib/site-packages
+/Library
+/share
+/Include
+/Scripts/*
+!/Scripts/pip.exe
+!/Scripts/pip3.10.exe
+!/Scripts/pip3.exe
+!/Scripts/wheel.exe
+get-pip.py
