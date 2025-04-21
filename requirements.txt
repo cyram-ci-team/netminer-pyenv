@@ -19,3 +19,9 @@ xlrd
 igraph
 pandas==2.2.3
 torch==2.3.0
+google-generativeai
+openai
+ollama
+langchain
+langchain-community
+langchain-ollama
