@@ -30,6 +30,7 @@ ESCAPE_DCT = {
 for i in range(0x20):
     ESCAPE_DCT.setdefault(chr(i), '\\u{0:04x}'.format(i))
     #ESCAPE_DCT.setdefault(chr(i), '\\u%04x' % (i,))
+del i
 
 INFINITY = float('inf')
 
@@ -173,7 +174,7 @@ class JSONEncoder(object):
                 else:
                     return list(iterable)
                 # Let the base class default method raise the TypeError
-                return JSONEncoder.default(self, o)
+                return super().default(o)
 
         """
         raise TypeError(f'Object of type {o.__class__.__name__} '

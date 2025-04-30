@@ -49,6 +49,7 @@ Sample use, programmatically
 """
 __all__ = ['Trace', 'CoverageResults']
 
+import io
 import linecache
 import os
 import sys
@@ -257,8 +258,7 @@ class CoverageResults:
                 modulename = _modname(filename)
             else:
                 dir = coverdir
-                if not os.path.exists(dir):
-                    os.makedirs(dir)
+                os.makedirs(dir, exist_ok=True)
                 modulename = _fullmodname(filename)
 
             # If desired, get a list of the line numbers which represent
@@ -716,7 +716,7 @@ def main():
             sys.argv = [opts.progname, *opts.arguments]
             sys.path[0] = os.path.dirname(opts.progname)
 
-            with open(opts.progname, 'rb') as fp:
+            with io.open_code(opts.progname) as fp:
                 code = compile(fp.read(), opts.progname, 'exec')
             # try to emulate __main__ namespace as much as possible
             globs = {

@@ -11,8 +11,8 @@ option.  The OpenerDirector is a composite object that invokes the
 Handlers needed to open the requested URL.  For example, the
 HTTPHandler performs HTTP GET and POST requests and deals with
 non-error returns.  The HTTPRedirectHandler automatically deals with
-HTTP 301, 302, 303 and 307 redirect errors, and the HTTPDigestAuthHandler
-deals with digest authentication.
+HTTP 301, 302, 303, 307, and 308 redirect errors, and the
+HTTPDigestAuthHandler deals with digest authentication.
 
 urlopen(url, data=None) -- Basic usage is the same as original
 urllib.  pass the url and optionally data to post to an HTTP URL, and
@@ -661,7 +661,7 @@ class HTTPRedirectHandler(BaseHandler):
         but another Handler might.
         """
         m = req.get_method()
-        if (not (code in (301, 302, 303, 307) and m in ("GET", "HEAD")
+        if (not (code in (301, 302, 303, 307, 308) and m in ("GET", "HEAD")
             or code in (301, 302, 303) and m == "POST")):
             raise HTTPError(req.full_url, code, msg, headers, fp)
 
@@ -748,7 +748,7 @@ class HTTPRedirectHandler(BaseHandler):
 
         return self.parent.open(new, timeout=req.timeout)
 
-    http_error_301 = http_error_303 = http_error_307 = http_error_302
+    http_error_301 = http_error_303 = http_error_307 = http_error_308 = http_error_302
 
     inf_msg = "The HTTP server returned a redirect error that would " \
               "lead to an infinite loop.\n" \
@@ -1790,7 +1790,7 @@ class URLopener:
         except (HTTPError, URLError):
             raise
         except OSError as msg:
-            raise OSError('socket error', msg).with_traceback(sys.exc_info()[2])
+            raise OSError('socket error', msg) from msg
 
     def open_unknown(self, fullurl, data=None):
         """Overridable interface to open unknown URL type."""
@@ -2092,7 +2092,7 @@ class URLopener:
             headers = email.message_from_string(headers)
             return addinfourl(fp, headers, "ftp:" + url)
         except ftperrors() as exp:
-            raise URLError('ftp error %r' % exp).with_traceback(sys.exc_info()[2])
+            raise URLError(f'ftp error: {exp}') from exp
 
     def open_data(self, url, data=None):
         """Use "data" URL."""
@@ -2207,6 +2207,13 @@ class FancyURLopener(URLopener):
         """Error 307 -- relocated, but turn POST into error."""
         if data is None:
             return self.http_error_302(url, fp, errcode, errmsg, headers, data)
+        else:
+            return self.http_error_default(url, fp, errcode, errmsg, headers)
+
+    def http_error_308(self, url, fp, errcode, errmsg, headers, data=None):
+        """Error 308 -- relocated, but turn POST into error."""
+        if data is None:
+            return self.http_error_301(url, fp, errcode, errmsg, headers, data)
         else:
             return self.http_error_default(url, fp, errcode, errmsg, headers)
 
@@ -2435,8 +2442,7 @@ class ftpwrapper:
                 conn, retrlen = self.ftp.ntransfercmd(cmd)
             except ftplib.error_perm as reason:
                 if str(reason)[:3] != '550':
-                    raise URLError('ftp error: %r' % reason).with_traceback(
-                        sys.exc_info()[2])
+                    raise URLError(f'ftp error: {reason}') from reason
         if not conn:
             # Set transfer mode to ASCII!
             self.ftp.voidcmd('TYPE A')
@@ -2463,7 +2469,13 @@ class ftpwrapper:
         return (ftpobj, retrlen)
 
     def endtransfer(self):
+        if not self.busy:
+            return
         self.busy = 0
+        try:
+            self.ftp.voidresp()
+        except ftperrors():
+            pass
 
     def close(self):
         self.keepalive = False
@@ -2491,34 +2503,28 @@ def getproxies_environment():
     this seems to be the standard convention.  If you need a
     different way, you can pass a proxies dictionary to the
     [Fancy]URLopener constructor.
+
     """
+    proxies = {}
     # in order to prefer lowercase variables, process environment in
     # two passes: first matches any, second pass matches lowercase only
-
-    # select only environment variables which end in (after making lowercase) _proxy
-    proxies = {}
-    environment = []
-    for name in os.environ.keys():
-        # fast screen underscore position before more expensive case-folding
-        if len(name) > 5 and name[-6] == "_" and name[-5:].lower() == "proxy":
-            value = os.environ[name]
-            proxy_name = name[:-6].lower()
-            environment.append((name, value, proxy_name))
-            if value:
-                proxies[proxy_name] = value
+    for name, value in os.environ.items():
+        name = name.lower()
+        if value and name[-6:] == '_proxy':
+            proxies[name[:-6]] = value
     # CVE-2016-1000110 - If we are running as CGI script, forget HTTP_PROXY
     # (non-all-lowercase) as it may be set from the web server by a "Proxy:"
     # header from the client
     # If "proxy" is lowercase, it will still be used thanks to the next block
     if 'REQUEST_METHOD' in os.environ:
         proxies.pop('http', None)
-    for name, value, proxy_name in environment:
-        # not case-folded, checking here for lower-case env vars only
+    for name, value in os.environ.items():
         if name[-6:] == '_proxy':
+            name = name.lower()
             if value:
-                proxies[proxy_name] = value
+                proxies[name[:-6]] = value
             else:
-                proxies.pop(proxy_name, None)
+                proxies.pop(name[:-6], None)
     return proxies
 
 def proxy_bypass_environment(host, proxies=None):
@@ -2571,6 +2577,7 @@ def _proxy_bypass_macosx_sysconf(host, proxy_settings):
     }
     """
     from fnmatch import fnmatch
+    from ipaddress import AddressValueError, IPv4Address
 
     hostonly, port = _splitport(host)
 
@@ -2587,20 +2594,17 @@ def _proxy_bypass_macosx_sysconf(host, proxy_settings):
             return True
 
     hostIP = None
+    try:
+        hostIP = int(IPv4Address(hostonly))
+    except AddressValueError:
+        pass
 
     for value in proxy_settings.get('exceptions', ()):
         # Items in the list are strings like these: *.local, 169.254/16
         if not value: continue
 
         m = re.match(r"(\d+(?:\.\d+)*)(/\d+)?", value)
-        if m is not None:
-            if hostIP is None:
-                try:
-                    hostIP = socket.gethostbyname(hostonly)
-                    hostIP = ip2num(hostIP)
-                except OSError:
-                    continue
-
+        if m is not None and hostIP is not None:
             base = ip2num(m.group(1))
             mask = m.group(2)
             if mask is None:
@@ -2620,6 +2624,31 @@ def _proxy_bypass_macosx_sysconf(host, proxy_settings):
         elif fnmatch(host, value):
             return True
 
+    return False
+
+
+# Same as _proxy_bypass_macosx_sysconf, testable on all platforms
+def _proxy_bypass_winreg_override(host, override):
+    """Return True if the host should bypass the proxy server.
+
+    The proxy override list is obtained from the Windows
+    Internet settings proxy override registry value.
+
+    An example of a proxy override value is:
+    "www.example.com;*.example.net; 192.168.0.1"
+    """
+    from fnmatch import fnmatch
+
+    host, _ = _splitport(host)
+    proxy_override = override.split(';')
+    for test in proxy_override:
+        test = test.strip()
+        # "<local>" should bypass the proxy server for all intranet addresses
+        if test == '<local>':
+            if '.' not in host:
+                return True
+        elif fnmatch(host, test):
+            return True
     return False
 
 
@@ -2721,7 +2750,7 @@ elif os.name == 'nt':
             import winreg
         except ImportError:
             # Std modules, so should be around - but you never know!
-            return 0
+            return False
         try:
             internetSettings = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                 r'Software\Microsoft\Windows\CurrentVersion\Internet Settings')
@@ -2731,40 +2760,10 @@ elif os.name == 'nt':
                                                      'ProxyOverride')[0])
             # ^^^^ Returned as Unicode but problems if not converted to ASCII
         except OSError:
-            return 0
+            return False
         if not proxyEnable or not proxyOverride:
-            return 0
-        # try to make a host list from name and IP address.
-        rawHost, port = _splitport(host)
-        host = [rawHost]
-        try:
-            addr = socket.gethostbyname(rawHost)
-            if addr != rawHost:
-                host.append(addr)
-        except OSError:
-            pass
-        try:
-            fqdn = socket.getfqdn(rawHost)
-            if fqdn != rawHost:
-                host.append(fqdn)
-        except OSError:
-            pass
-        # make a check value list from the registry entry: replace the
-        # '<local>' string by the localhost entry and the corresponding
-        # canonical entry.
-        proxyOverride = proxyOverride.split(';')
-        # now check if we match one of the registry values.
-        for test in proxyOverride:
-            if test == '<local>':
-                if '.' not in rawHost:
-                    return 1
-            test = test.replace(".", r"\.")     # mask dots
-            test = test.replace("*", r".*")     # change glob sequence
-            test = test.replace("?", r".")      # change glob char
-            for val in host:
-                if re.match(test, val, re.I):
-                    return 1
-        return 0
+            return False
+        return _proxy_bypass_winreg_override(host, proxyOverride)
 
     def proxy_bypass(host):
         """Return True, if host should be bypassed.

@@ -74,6 +74,7 @@ import os
 import builtins
 import _sitebuiltins
 import io
+import stat
 
 # Prefixes for site-packages; add additional prefixes like /usr/local here
 PREFIXES = [sys.prefix, sys.exec_prefix]
@@ -168,6 +169,14 @@ def addpackage(sitedir, name, known_paths):
     else:
         reset = False
     fullname = os.path.join(sitedir, name)
+    try:
+        st = os.lstat(fullname)
+    except OSError:
+        return
+    if ((getattr(st, 'st_flags', 0) & stat.UF_HIDDEN) or
+        (getattr(st, 'st_file_attributes', 0) & stat.FILE_ATTRIBUTE_HIDDEN)):
+        _trace(f"Skipping hidden .pth file: {fullname!r}")
+        return
     _trace(f"Processing .pth file: {fullname!r}")
     try:
         # locale encoding is not ideal especially on Windows. But we have used
@@ -221,7 +230,8 @@ def addsitedir(sitedir, known_paths=None):
         names = os.listdir(sitedir)
     except OSError:
         return
-    names = [name for name in names if name.endswith(".pth")]
+    names = [name for name in names
+             if name.endswith(".pth") and not name.startswith(".")]
     for name in sorted(names):
         addpackage(sitedir, name, known_paths)
     if reset:
@@ -266,8 +276,8 @@ def _getuserbase():
     if env_base:
         return env_base
 
-    # VxWorks has no home directories
-    if sys.platform == "vxworks":
+    # Emscripten, VxWorks, and WASI have no home directories
+    if sys.platform in {"emscripten", "vxworks", "wasi"}:
         return None
 
     def joinuser(*args):
@@ -361,11 +371,11 @@ def getsitepackages(prefixes=None):
             continue
         seen.add(prefix)
 
-        libdirs = [sys.platlibdir]
-        if sys.platlibdir != "lib":
-            libdirs.append("lib")
-
         if os.sep == '/':
+            libdirs = [sys.platlibdir]
+            if sys.platlibdir != "lib":
+                libdirs.append("lib")
+
             for libdir in libdirs:
                 path = os.path.join(prefix, libdir,
                                     "python%d.%d" % sys.version_info[:2],
@@ -373,10 +383,7 @@ def getsitepackages(prefixes=None):
                 sitepackages.append(path)
         else:
             sitepackages.append(prefix)
-
-            for libdir in libdirs:
-                path = os.path.join(prefix, libdir, "site-packages")
-                sitepackages.append(path)
+            sitepackages.append(os.path.join(prefix, "Lib", "site-packages"))
     return sitepackages
 
 def addsitepackages(known_paths, prefixes=None):
@@ -418,8 +425,10 @@ def setcopyright():
     files, dirs = [], []
     # Not all modules are required to have a __file__ attribute.  See
     # PEP 420 for more details.
-    if hasattr(os, '__file__'):
+    here = getattr(sys, '_stdlib_dir', None)
+    if not here and hasattr(os, '__file__'):
         here = os.path.dirname(os.__file__)
+    if here:
         files.extend(["LICENSE.txt", "LICENSE"])
         dirs.extend([os.path.join(here, os.pardir), here, os.curdir])
     builtins.license = _sitebuiltins._Printer(
