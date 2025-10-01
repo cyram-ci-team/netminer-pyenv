@@ -13,7 +13,7 @@ pip 업그레이드 및 필수요소 설치
 `./python.exe -m pip install -r requirements.txt --no-warn-script-location`
 
 torch 설치
-`./python.exe -m pip install torch_cluster==1.6.3 torch_scatter==2.1.2 torch_sparse==0.6.18 torch_spline_conv==1.2.2 -f https://data.pyg.org/whl/torch-2.3.0+cpu.html`
+`./python.exe -m pip install torch_cluster torch_scatter torch_sparse torch_spline_conv -f https://data.pyg.org/whl/torch-2.2.0+cpu.html`
 
 torch-geometric 설치
 `./python.exe -m pip install torch-geometric==2.6.1`
