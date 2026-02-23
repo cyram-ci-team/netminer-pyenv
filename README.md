@@ -12,12 +12,13 @@ pip 업그레이드 및 필수요소 설치
 기본 요청 라이브러리 설치 (requirements.txt 참조)
 `./python.exe -m pip install -r requirements.txt --no-warn-script-location`
 
-torch 설치
-`./python.exe -m pip install torch_cluster torch_scatter torch_sparse torch_spline_conv -f https://data.pyg.org/whl/torch-2.2.0+cpu.html`
+BERTopic 라이브러리 설치 (requirements_bertopic.txt 참조)
+`./python.exe -m pip install -r requirements_bertopic.txt --no-warn-script-location`
 
-torch-geometric 설치
-`./python.exe -m pip install torch-geometric==2.6.1`
+torch 설치
+`./python.exe -m pip install torch_cluster torch_scatter torch_sparse torch_spline_conv -f https://data.pyg.org/whl/torch-2.8.0+cpu.html`
 
 spacy 요소 다운로드
 `./python.exe -m spacy download en_core_web_sm`
 `./python.exe -m spacy download en_core_web_md`
+`./python.exe -m spacy download zh_core_web_trf`
