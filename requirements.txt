@@ -15,10 +15,13 @@ chardet==5.2.0
 charset-normalizer==3.4.1
 click==8.1.8
 cloudpathlib==0.16.0
+cloudpickle==3.1.2
 colorama==0.4.6
 confection==0.1.5
+contourpy==1.3.3
 curated-tokenizers
 curated-transformers
+cycler==0.12.1
 cymem==2.0.11
 dataclasses-json==0.6.7
 distro==1.9.0
@@ -26,6 +29,7 @@ et_xmlfile==2.0.0
 fastapi==0.115.12
 filelock==3.19.1
 filetype==1.2.0
+fonttools==4.62.1
 frozenlist==1.6.0
 fsspec==2025.9.0
 funcy
@@ -33,9 +37,9 @@ gensim==4.3.3
 google-ai-generativelanguage
 google-api-core==2.25.0rc0
 google-api-python-client==2.169.0
-google-auth==2.39.0
+google-auth==2.48.0
 google-auth-httplib2==0.2.0
-google-generativeai
+google-genai==1.66.0
 googleapis-common-protos==1.70.0
 greenlet==3.2.1
 grpcio==1.71.0
@@ -55,6 +59,7 @@ jsonpatch==1.33
 jsonpointer==3.0.0
 kiwipiepy==0.20.4
 kiwipiepy_model==0.20.0
+kiwisolver==1.5.0
 langchain==0.3.24
 langchain-community==0.3.23
 langchain-core==0.3.66
@@ -66,11 +71,13 @@ langchain-text-splitters==0.3.8
 langcodes==3.5.0
 langsmith
 language_data==1.3.0
+llvmlite==0.46.0
 lxml==5.4.0
 marisa-trie==1.2.1
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 marshmallow==3.26.1
+matplotlib==3.10.8
 mdurl==0.1.2
 mpmath==1.3.0
 multidict==6.4.3
@@ -78,6 +85,8 @@ murmurhash==1.0.12
 mypy_extensions==1.1.0
 narwhals
 networkx==3.5
+neo4j==6.1.0
+numba==0.64.0
 numpy==1.26.4
 ollama==0.4.8
 openai==1.91.0
@@ -86,6 +95,7 @@ ordered-set==4.1.0
 orjson==3.10.17
 packaging==24.2
 pandas==2.3.2
+Pillow>=10.0.0
 plotly
 preshed==3.0.9
 propcache==0.3.1
@@ -97,8 +107,8 @@ pyasn1_modules==0.4.2
 pydantic==2.11.4
 pydantic-settings==2.9.1
 pydantic_core==2.33.2
-Pygments==2.19.1
 pyLDAvis==3.4.1
+Pygments==2.19.1
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
@@ -116,6 +126,7 @@ scipy==1.13.1
 shellingham==1.5.4
 shortuuid==1.0.13
 six==1.17.0
+slicer==0.0.7
 smart-open==6.4.0
 sniffio==1.3.1
 soupsieve==2.7
@@ -154,3 +165,4 @@ xlwt==1.3.0
 xxhash==3.6.0
 yarl==1.20.0
 zstandard==0.23.0
+shap==0.44.0
